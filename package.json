@@ -2,7 +2,7 @@
   "name": "atlantis",
   "version": "0.1.0",
   "private": true,
-  "homepage": "http://brianblakely.github.io/atlantis",
+  "homepage": "https://kadaz.github.io/atlantis",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
