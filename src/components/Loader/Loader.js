@@ -1,46 +1,68 @@
 import React from "react";
-import PropTypes from "prop-types";
 
 import * as libraryActions from "../actions/libraryActions";
 
 const Loader = ({ uri }) => {
-  React.useEffect(() => {
-    (async () => {
-      if (!uri) {
-        return false;
-      }
 
-      try {
-        const response = await fetch(uri);
+```
+React.useEffect(() => {
 
-        if (!response.ok) {
-          throw new Error(`Network response was not ok.`);
+    if (!uri) {
+        return;
+    }
+
+    let cancelled = false;
+
+    const loadROM = async () => {
+
+        try {
+
+            const response = await fetch(uri, {
+                cache: "no-store"
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    `ROM download failed: HTTP ${response.status}`
+                );
+            }
+
+            const buffer = await response.arrayBuffer();
+
+            if (!buffer.byteLength) {
+                throw new Error(`ROM file is empty.`);
+            }
+
+            if (!cancelled) {
+                libraryActions.setCurrentROM(buffer);
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Atlantis ROM loading error:",
+                error
+            );
+
         }
 
-        const blob = await response.blob();
+    };
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          libraryActions.setCurrentROM(reader.result);
-        };
-        reader.readAsArrayBuffer(blob);
-      } catch (error) {
-        console.error(
-          `There has been a problem with your fetch operation: `,
-          error.message
-        );
-      }
-    })();
-  }, [uri]);
+    loadROM();
 
-  return null;
-};
+    return () => {
+        cancelled = true;
+    };
 
-Loader.propTypes = {
-  uri: PropTypes.string
+}, [uri]);
+
+return null;
+```
+
 };
 
 export default React.memo(
-  Loader,
-  (prevProps, nextProps) => prevProps.uri === nextProps.uri
+Loader,
+(prevProps, nextProps) =>
+prevProps.uri === nextProps.uri
 );
