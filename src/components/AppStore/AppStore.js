@@ -1,109 +1,211 @@
 import React from "react";
+
 import {
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Drawer,
-  ListSubheader
+List,
+ListItem,
+ListItemIcon,
+ListItemText,
+Drawer,
+ListSubheader
 } from "@material-ui/core";
+
 import Box from "@material-ui/core/Box";
-import { Store as StoreIcon } from "@material-ui/icons";
+import { Storage as StorageIcon } from "@material-ui/icons";
 
 import { appContext } from "../Context/Context";
 import * as appActions from "../actions/appActions";
+
 import { useLibraryStyles } from "../Library/LibraryStyles";
-import GameList from "../Library/GameList.js";
-import Game from "../Library/Game.js";
-import Loader from "../Loader/Loader.js";
+import GameList from "../Library/GameList";
+import Game from "../Library/Game";
+import Loader from "../Loader/Loader";
+
+const RETRO_MEDIA_API =
+`https://api.github.com/repos/Kadaz/Retro-Media/git/trees/main?recursive=1`;
+
+const RETRO_MEDIA_RAW =
+`https://raw.githubusercontent.com/Kadaz/Retro-Media/main/`;
 
 const AppStore = () => {
-  const state = React.useContext(appContext);
-  const [selectedGame, setSelectedGame] = React.useState();
+const state = React.useContext(appContext);
+const classes = useLibraryStyles();
 
-  const classes = useLibraryStyles();
+const [roms, setRoms] = React.useState([]);
+const [selectedGame, setSelectedGame] = React.useState(null);
+const [loading, setLoading] = React.useState(false);
+const [error, setError] = React.useState(null);
 
-  const load = uri => () => setSelectedGame(uri);
+const loadROM = uri => () => {
+setSelectedGame(uri);
+};
 
-  const [storeData, setStoreData] = React.useState();
+const fetchROMs = async () => {
+setLoading(true);
+setError(null);
 
-  const fetchStoreData = async (page = 1) => {
-    const payload = await fetch(
-      `https://gbhh.avivace.com/api/homebrews?page=${page}`
-    );
-    const data = await payload.json();
-
-    setStoreData(data);
-  };
-
-  const pagination = !storeData
-    ? {}
-    : {
-        onChange: fetchStoreData,
-        currentPage: Number(storeData.page),
-        totalPages: Number(storeData.pages),
-        perPage: Number(storeData.limit),
-        totalItems: Number(storeData.total)
-      };
-
-  React.useEffect(() => {
-    fetchStoreData();
-  }, []);
-
-  return (
-    <>
-      <ListItem button onClick={appActions.toggleDrawer(`appStore`)}>
-        <ListItemIcon>
-          <StoreIcon />
-        </ListItemIcon>
-        <ListItemText>{`See everything`}</ListItemText>
-      </ListItem>
-
-      {storeData && (
-        <Drawer
-          anchor="right"
-          open={state.appStoreOpen}
-          onClose={appActions.toggleDrawer(`appStore`)}
-        >
-          <Box clone p="0">
-            <List
-              className={classes.drawer}
-              role="button"
-              subheader={
-                <ListSubheader className={classes.heading}>
-                  <StoreIcon className={classes.headingIcon} />
-                  {`Applantis - Powered by Homebrew Hub`}
-                </ListSubheader>
-              }
-              tabIndex={0}
-            >
-              <div>
-                <GameList pagination={pagination}>
-                  {storeData.docs.map(
-                    ({ permalink, rom, screenshots, title, developer }) => (
-                      <Game
-                        key={permalink}
-                        setCurrentROM={load(
-                          `https://gbhh.avivace.com/database/entries/${permalink}/${rom}`
-                        )}
-                        thumb={`https://gbhh.avivace.com/database/entries/${permalink}/${
-                          screenshots[0]
-                        }`}
-                        title={title}
-                        developer={developer}
-                      />
-                    )
-                  )}
-                </GameList>
-
-                <Loader uri={selectedGame} />
-              </div>
-            </List>
-          </Box>
-        </Drawer>
-      )}
-    </>
+```
+try {
+  const response = await fetch(
+    RETRO_MEDIA_API,
+    {
+      cache: `no-store`
+    }
   );
+
+  if (!response.ok) {
+    throw new Error(
+      `GitHub API error: ${response.status}`
+    );
+  }
+
+  const data = await response.json();
+
+  const foundROMs = data.tree
+    .filter(item => {
+      return (
+        item.type === `blob` &&
+        /^roms\/.*\.(gb|gbc)$/iu.test(item.path)
+      );
+    })
+    .sort((a, b) =>
+      a.path.localeCompare(b.path)
+    )
+    .map(item => {
+      const filename = item.path
+        .split(`/`)
+        .pop();
+
+      return {
+        path: item.path,
+        title: filename.replace(
+          /\.(gb|gbc)$/iu,
+          ``
+        ),
+        uri:
+          RETRO_MEDIA_RAW +
+          item.path
+            .split(`/`)
+            .map(encodeURIComponent)
+            .join(`/`)
+      };
+    });
+
+  setRoms(foundROMs);
+
+} catch (fetchError) {
+  console.error(
+    `Could not load Retro-Media ROM list:`,
+    fetchError
+  );
+
+  setError(
+    `Could not load ROMs from Retro-Media.`
+  );
+}
+
+setLoading(false);
+```
+
+};
+
+React.useEffect(() => {
+if (state.appStoreOpen) {
+fetchROMs();
+}
+}, [state.appStoreOpen]);
+
+return (
+<>
+<ListItem
+button
+onClick={appActions.toggleDrawer(`appStore`)}
+> <ListItemIcon> <StorageIcon /> </ListItemIcon>
+
+```
+    <ListItemText>
+      {`Retro-Media ROMs`}
+    </ListItemText>
+  </ListItem>
+
+  <Drawer
+    anchor="right"
+    open={state.appStoreOpen}
+    onClose={appActions.toggleDrawer(`appStore`)}
+  >
+    <Box clone p="0">
+      <List
+        className={classes.drawer}
+        role="button"
+        subheader={
+          <ListSubheader
+            className={classes.heading}
+          >
+            <StorageIcon
+              className={classes.headingIcon}
+            />
+
+            {`Retro-Media`}
+          </ListSubheader>
+        }
+      >
+
+        {loading && (
+          <ListItem>
+            <ListItemText>
+              {`Searching for GB/GBC ROMs...`}
+            </ListItemText>
+          </ListItem>
+        )}
+
+        {error && (
+          <ListItem>
+            <ListItemText>
+              {error}
+            </ListItemText>
+          </ListItem>
+        )}
+
+        {!loading &&
+          !error &&
+          roms.length === 0 && (
+            <ListItem>
+              <ListItemText>
+                {`No GB/GBC ROMs found.`}
+              </ListItemText>
+            </ListItem>
+          )}
+
+        {!loading &&
+          !error &&
+          roms.length > 0 && (
+            <GameList>
+              {roms.map(rom => (
+                <Game
+                  key={rom.path}
+                  setCurrentROM={loadROM(
+                    rom.uri
+                  )}
+                  thumb={false}
+                  title={rom.title}
+                  developer={
+                    /\.gbc$/iu.test(rom.path)
+                      ? `Game Boy Color`
+                      : `Game Boy`
+                  }
+                />
+              ))}
+            </GameList>
+          )}
+
+        <Loader uri={selectedGame} />
+
+      </List>
+    </Box>
+  </Drawer>
+</>
+```
+
+);
 };
 
 export default AppStore;
