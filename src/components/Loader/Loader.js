@@ -1,68 +1,53 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 import * as libraryActions from "../actions/libraryActions";
 
 const Loader = ({ uri }) => {
+React.useEffect(() => {
+(async () => {
+if (!uri) {
+return;
+}
 
 ```
-React.useEffect(() => {
+  try {
+    const response = await fetch(uri, {
+      cache: `no-store`
+    });
 
-    if (!uri) {
-        return;
+    if (!response.ok) {
+      throw new Error(
+        `Network response was not ok: ${response.status}`
+      );
     }
 
-    let cancelled = false;
+    const buffer = await response.arrayBuffer();
 
-    const loadROM = async () => {
+    if (!buffer.byteLength) {
+      throw new Error(`ROM file is empty.`);
+    }
 
-        try {
-
-            const response = await fetch(uri, {
-                cache: "no-store"
-            });
-
-            if (!response.ok) {
-                throw new Error(
-                    `ROM download failed: HTTP ${response.status}`
-                );
-            }
-
-            const buffer = await response.arrayBuffer();
-
-            if (!buffer.byteLength) {
-                throw new Error(`ROM file is empty.`);
-            }
-
-            if (!cancelled) {
-                libraryActions.setCurrentROM(buffer);
-            }
-
-        } catch (error) {
-
-            console.error(
-                "Atlantis ROM loading error:",
-                error
-            );
-
-        }
-
-    };
-
-    loadROM();
-
-    return () => {
-        cancelled = true;
-    };
+    libraryActions.setCurrentROM(buffer);
+  } catch (error) {
+    console.error(
+      `There has been a problem loading the ROM:`,
+      error
+    );
+  }
+})();
+```
 
 }, [uri]);
 
 return null;
-```
+};
 
+Loader.propTypes = {
+uri: PropTypes.string
 };
 
 export default React.memo(
 Loader,
-(prevProps, nextProps) =>
-prevProps.uri === nextProps.uri
+(prevProps, nextProps) => prevProps.uri === nextProps.uri
 );
